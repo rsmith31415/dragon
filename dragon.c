@@ -64,10 +64,30 @@ void do_quit(GtkWidget *widget, gpointer data) {
     exit(0);
 }
 
-void button_clicked(GtkWidget *widget, gpointer user_data) {
+void button_clicked(GtkWidget *widget, GdkEventButton *event, gpointer user_data) {
     struct draggable_thing *dd = (struct draggable_thing *)user_data;
     if (0 == fork()) {
-        execlp("xdg-open", "xdg-open", dd->uri, NULL);
+        // left-click default behavior
+        if (event->type == GDK_BUTTON_PRESS && event->button == 1)
+        {
+            execlp("xdg-open", "xdg-open", dd->uri, NULL);
+        }
+        // right-click - opens editor
+        // pinta can't open URIs
+        if (event->type == GDK_BUTTON_PRESS && event->button == 3)
+        {
+            char sub[1000];
+            int c = 0;
+            int len = strlen(dd->uri);
+            int position = 8;
+            while (c < len) {
+                sub[c] = dd->uri[position+c-1];
+                c++;
+            }
+            sub[c] = '\0';
+
+            execlp("pinta", "pinta", sub, NULL);
+        }
     }
 }
 
@@ -157,7 +177,7 @@ GtkButton *add_button(char *label, struct draggable_thing *dragdata, int type) {
     gtk_drag_source_set_target_list(GTK_WIDGET(button), targetlist);
     g_signal_connect(GTK_WIDGET(button), "drag-data-get",
             G_CALLBACK(drag_data_get), dragdata);
-    g_signal_connect(GTK_WIDGET(button), "clicked",
+    g_signal_connect(GTK_WIDGET(button), "button-press-event",
             G_CALLBACK(button_clicked), dragdata);
     g_signal_connect(GTK_WIDGET(button), "drag-end",
             G_CALLBACK(drag_end), dragdata);
